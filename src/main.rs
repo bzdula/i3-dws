@@ -20,6 +20,10 @@ struct Args {
     /// Move container to workspace
     #[clap(short, long = "move", value_parser)]
     mv: Option<usize>,
+    #[clap(long, exclusive(true))]
+    list_workspaces: bool,
+    #[clap(long, exclusive(true))]
+    list_outputs: bool,
 }
 
 fn get_output(connection: &mut I3Connection, name: &str) -> Result<(Output, usize)> {
@@ -30,7 +34,7 @@ fn get_output(connection: &mut I3Connection, name: &str) -> Result<(Output, usiz
         .iter()
         .filter(|output| output.name != "xroot-0")
         .position(|output| output.name == name)
-        .ok_or_else(|| anyhow!("Error finding correct ouput"))?;
+        .ok_or_else(|| anyhow!("Error finding correct output"))?;
 
     Ok((
         os.outputs
@@ -51,7 +55,7 @@ fn get_focused_output(connection: &mut I3Connection) -> Result<(Output, usize)> 
         .find(|workspace| workspace.focused)
         .ok_or_else(|| anyhow!("Error finiding workspace with focus"))?;
 
-    get_output(connection, &focused.name)
+    get_output(connection, &focused.output)
 }
 
 fn main() {
@@ -60,10 +64,49 @@ fn main() {
         app.print_help().expect("Error on print help");
         process::exit(1);
     }
-
     let args = Args::parse();
+    let mut connection = I3Connection::connect().expect("Cannot connect to I3 ipc");
 
-    let mut connection = I3Connection::connect().unwrap();
+    if let Some(ref output) = args.output {
+        if !connection
+            .get_outputs()
+            .expect("Cannot get outputs")
+            .outputs
+            .iter_mut()
+            .any(|o| &o.name == output)
+        {
+            println!("Wrong output");
+            process::exit(1);
+        }
+    }
+
+    if args.list_workspaces {
+        println!(
+            "{:?}",
+            connection
+                .get_workspaces()
+                .expect("Error getting workspaces")
+                .workspaces
+                .iter()
+                .map(|w| w.name.clone())
+                .collect::<Vec<String>>()
+        );
+        process::exit(0);
+    }
+    if args.list_outputs {
+        println!(
+            "{:?}",
+            connection
+                .get_outputs()
+                .expect("Error getting output")
+                .outputs
+                .iter()
+                .filter(|o| o.name != "xroot-0")
+                .map(|w| w.name.clone())
+                .collect::<Vec<String>>()
+        );
+        process::exit(0);
+    }
 
     // -w ... + optional -o
     if let Some(workspace_id) = args.workspace {
@@ -77,10 +120,11 @@ fn main() {
 
         connection
             .run_command(&format!(
-                "workspace {} output {}",
+                "workspace {}, move workspace to output {}",
                 workspace_number, output.name
             ))
             .expect("Error on command -w -o");
+
     } else if let Some(output_name) = args.output {
         let (output, _) =
             get_output(&mut connection, &output_name).expect("Error getting named workspace");
@@ -96,29 +140,16 @@ fn main() {
         connection
             .run_command(&format!("workspace {}", workspace.name))
             .expect("Error on command -o");
+
+    } else if let Some(mv_id) = args.mv {
+        let (_, output_idx) =
+            get_focused_output(&mut connection).expect("Error getting focused output");
+        let workspace_number = NUM_WORKSPACES_PER_OUTPUT * output_idx + mv_id;
+        connection
+            .run_command(&format!(
+                "move container to workspace number {}",
+                workspace_number
+            ))
+            .expect("Error on move");
     }
-
-    // let (focused_output, output_idx) =
-    //     get_focused_output(&mut connection).expect("Cannot retrieve focused output");
-
-    // let outcome = if let Some(workspace_idx) = args.workspace {
-    //     let workspace_number = NUM_WORKSPACES_PER_OUTPUT * output_idx + workspace_idx;
-    //     eprintln!(
-    //         "WORKSPACE {} output {}",
-    //         workspace_number, focused_output.name
-    //     );
-
-    //     connection.run_command(&format!(
-    //         "workspace {} output {}",
-    //         workspace_number, focused_output.name
-    //     ))
-    // } else if let Some(_output) = args.output {
-    //     todo!()
-    // } else {
-    //     panic!("You can't be here");
-    // };
-
-    // if let Err(msg_error) = outcome {
-    //     eprintln!("COMMAND ERROR: {}", msg_error);
-    // }
 }
