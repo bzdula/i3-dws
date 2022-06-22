@@ -1,4 +1,5 @@
 # i3-dws
+![crates.io](https://img.shields.io/crates/v/i3-dws.svg)
 
 **D**ecoupled **W**orkspace **S**witcher
 
