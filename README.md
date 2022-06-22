@@ -22,6 +22,7 @@ OPTIONS:
 ## Configuration 
 Use ```i3-dws --create-cfg``` to get initial workspace config and paste it into your i3 config file (usually in ```~/.config/i3/config``` ). Additional configs may look like that: 
 ```INI
+# change workspace 
 bindsym $superkey+1 exec --no-startup-id i3-dws -w 1 
 bindsym $superkey+2 exec --no-startup-id i3-dws -w 2
 bindsym $superkey+3 exec --no-startup-id i3-dws -w 3
