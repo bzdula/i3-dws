@@ -1,6 +1,6 @@
 [package]
 name = "i3-dws"
-version = "0.1.0"
+version = "0.1.1"
 description = "Decoupled Workspace Switcher for i3"
 edition = "2021"
 authors = ["bzdula <bzdula@bzdulnet.pl"]
