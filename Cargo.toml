@@ -1,10 +1,13 @@
 [package]
 name = "i3-dws"
 version = "0.1.0"
+description = "Decoupled Workspace Switcher for i3"
 edition = "2021"
 authors = ["bzdula <bzdula@bzdulnet.pl"]
 readme = "README.md"
 keywords = ["i3","workspace"]
+license = "MIT"
+categories = ["command-line-utilities"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
