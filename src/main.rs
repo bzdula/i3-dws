@@ -24,6 +24,8 @@ struct Args {
     list_workspaces: bool,
     #[clap(long, exclusive(true))]
     list_outputs: bool,
+    #[clap(long, exclusive(true))]
+    create_cfg: bool,
 }
 
 fn get_output(connection: &mut I3Connection, name: &str) -> Result<(Output, usize)> {
@@ -32,7 +34,7 @@ fn get_output(connection: &mut I3Connection, name: &str) -> Result<(Output, usiz
     let position = os
         .outputs
         .iter()
-        .filter(|output| output.name != "xroot-0")
+        .filter(|output| output.active )
         .position(|output| output.name == name)
         .ok_or_else(|| anyhow!("Error finding correct output"))?;
 
@@ -56,6 +58,19 @@ fn get_focused_output(connection: &mut I3Connection) -> Result<(Output, usize)> 
         .ok_or_else(|| anyhow!("Error finiding workspace with focus"))?;
 
     get_output(connection, &focused.output)
+}
+
+fn create_cfg(connection: &mut I3Connection) -> Result<String> {
+    let os = connection.get_outputs()?;
+
+    Ok(os
+        .outputs
+        .iter()
+        .filter(|output| output.active )
+        .enumerate()
+        .map(|(n, output)| format!("workspace {} output {}", n * NUM_WORKSPACES_PER_OUTPUT + 1, output.name))
+        .collect::<Vec<String>>()
+        .join("\n"))
 }
 
 fn main() {
@@ -107,7 +122,10 @@ fn main() {
         );
         process::exit(0);
     }
-
+    if args.create_cfg {
+        println!("{}", create_cfg(&mut connection).expect("Error on creating config"));
+        process::exit(0);
+    }
     // -w ... + optional -o
     if let Some(workspace_id) = args.workspace {
         let (output, output_idx) = if let Some(output_arg) = args.output {
@@ -124,7 +142,6 @@ fn main() {
                 workspace_number, output.name
             ))
             .expect("Error on command -w -o");
-
     } else if let Some(output_name) = args.output {
         let (output, _) =
             get_output(&mut connection, &output_name).expect("Error getting named workspace");
@@ -140,7 +157,6 @@ fn main() {
         connection
             .run_command(&format!("workspace {}", workspace.name))
             .expect("Error on command -o");
-
     } else if let Some(mv_id) = args.mv {
         let (_, output_idx) =
             get_focused_output(&mut connection).expect("Error getting focused output");
